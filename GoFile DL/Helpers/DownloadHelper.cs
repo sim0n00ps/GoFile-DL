@@ -3,6 +3,7 @@ using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,15 +11,13 @@ namespace GoFile_DL.Helpers
 {
 	public class DownloadHelper 
 	{
-		public static async Task DownloadFile(string path, string filename, string url, HttpClient client, Config config, ProgressTask task)
+		public static async Task DownloadFile(string path, string filename, string url, HttpClient client, ProgressTask progressTask)
 		{
 			try
 			{
 				using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
 				{
 					response.EnsureSuccessStatusCode();
-					task.MaxValue(response.Content.Headers.ContentLength ?? 0);
-					task.StartTask();
 
 					using (var contentStream = await response.Content.ReadAsStreamAsync())
 					using (var fileStream = new FileStream(path + "/" + filename, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
@@ -32,7 +31,7 @@ namespace GoFile_DL.Helpers
 								break;
 							}
 
-							task.Increment(read);
+							progressTask.Increment(read);
 
 							await fileStream.WriteAsync(buffer, 0, read);
 						}
@@ -43,6 +42,24 @@ namespace GoFile_DL.Helpers
 			{
 				Console.WriteLine(ex.ToString());
 			}
+		}
+
+		public static string CalculateMD5(string filePath)
+		{
+			using (var md5 = MD5.Create())
+			{
+				using (var stream = System.IO.File.OpenRead(filePath))
+				{
+					byte[] hash = md5.ComputeHash(stream);
+					return BitConverter.ToString(hash).Replace("-", "").ToLower();
+				}
+			}
+		}
+
+		public static bool VerifyMD5(string filePath, string expectedMD5)
+		{
+			string fileMD5 = CalculateMD5(filePath);
+			return fileMD5.Equals(expectedMD5, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }
