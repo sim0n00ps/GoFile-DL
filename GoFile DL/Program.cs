@@ -37,7 +37,7 @@ namespace GoFile_DL
 				UpdateConfig();
 			}
 
-			string siteToken = await aPIHelper.GetSiteToken();
+			string? siteToken = await aPIHelper.GetSiteToken();
 			if(Config != null && Config.Token != siteToken)
 			{
 				Config.SiteToken = siteToken;
@@ -67,144 +67,151 @@ namespace GoFile_DL
 						break;
 				}
 			} while (true);
-
-			
 		}
 
 		public static async Task SingleURLDownload()
 		{
 			try
 			{
-				string inputUrl = AnsiConsole.Prompt(
-				new TextPrompt<string>("[red]Please enter a GoFile URL: [/]")
-					.ValidationErrorMessage("[red]Please enter a valid GoFile link[/]")
-					.Validate(url =>
-					{
-						Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z]+)", RegexOptions.IgnoreCase);
-						if (regex.IsMatch(url))
-						{
-							return ValidationResult.Success();
-						}
-						return ValidationResult.Error("[red]Please enter a valid GoFile link[/]");
-					}));
-
-				GetContentResponse? getContentResponse = await aPIHelper.GetContent(GetCode(inputUrl), Config);
-				if (getContentResponse != null && getContentResponse.status == "ok")
+				if(Config != null)
 				{
-					Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponse, Config);
-					if (!Path.Exists("Downloads"))
-					{
-						Directory.CreateDirectory("Downloads");
-					}
-
-					HttpClient client = CreateHttpClient(Config.Token);
-
-					await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
-					{
-						if (!Directory.Exists(folderPath))
-						{
-							Directory.CreateDirectory(folderPath);
-						}
-
-						if (folder.Files.Count > 0)
-						{
-							AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
-						}
-
-						foreach (Entities.File file in folder.Files)
-						{
-							await AnsiConsole.Progress()
-								.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
-								.StartAsync(async ctx =>
-								{
-									var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
-									downloadTask.MaxValue = file.Size;
-
-									bool downloadSuccessful = false;
-
-									do
-									{
-										await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
-
-										bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
-
-										if (isMD5Valid)
-										{
-											downloadSuccessful = true;
-										}
-										else
-										{
-											AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
-											System.IO.File.Delete(folderPath + "/" + file.Name);
-										}
-
-									} while (!downloadSuccessful);
-								});
-						}
-					}, "Downloads");
-				}
-				else if (getContentResponse != null && getContentResponse.status == "error-passwordRequired")
-				{
-					AnsiConsole.Markup($"[red]Base Folder is password protected\n[/]");
-					while (true)
-					{
-						string inputPassword = AnsiConsole.Prompt(new TextPrompt<string>("[red]Enter Password: [/]"));
-						string hashedPassword = PasswordHelper.ComputeSHA256Hash(inputPassword);
-						GetContentResponse? getContentResponseWithPassword = await aPIHelper.GetContentWithPassword(GetCode(inputUrl), hashedPassword, Config);
-						if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "ok")
-						{
-							Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponseWithPassword, Config);
-							if (!Path.Exists("Downloads"))
+					string inputUrl = AnsiConsole.Prompt(
+						new TextPrompt<string>("[red]Please enter a GoFile URL: [/]")
+							.ValidationErrorMessage("[red]Please enter a valid GoFile link[/]")
+							.Validate(url =>
 							{
-								Directory.CreateDirectory("Downloads");
+								Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z]+)", RegexOptions.IgnoreCase);
+								if (regex.IsMatch(url))
+								{
+									return ValidationResult.Success();
+								}
+								return ValidationResult.Error("[red]Please enter a valid GoFile link[/]");
+							}));
+
+					GetContentResponse? getContentResponse = await aPIHelper.GetContent(GetCode(inputUrl), Config);
+					if (getContentResponse != null && getContentResponse.status == "ok" && Config != null && !string.IsNullOrEmpty(Config.Token) && !string.IsNullOrEmpty(Config.SiteToken))
+					{
+						Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponse, Config);
+						if (!Path.Exists("Downloads"))
+						{
+							Directory.CreateDirectory("Downloads");
+						}
+
+						HttpClient client = CreateHttpClient(Config.Token);
+
+						await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
+						{
+							if (!Directory.Exists(folderPath))
+							{
+								Directory.CreateDirectory(folderPath);
 							}
 
-							HttpClient client = CreateHttpClient(Config.Token);
-
-							await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
+							if (folder.Files.Count > 0)
 							{
-								if (!Directory.Exists(folderPath))
-								{
-									Directory.CreateDirectory(folderPath);
-								}
+								AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
+							}
 
-								foreach (Entities.File file in folder.Files)
+							foreach (Entities.File file in folder.Files)
+							{
+								if(file != null && file.Name != null && file.DownloadLink != null && file.MD5Hash != null)
 								{
 									await AnsiConsole.Progress()
-										.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
-										.StartAsync(async ctx =>
+									.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
+									.StartAsync(async ctx =>
+									{
+										var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+										downloadTask.MaxValue = file.Size;
+
+										bool downloadSuccessful = false;
+
+										do
 										{
-											var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
-											downloadTask.MaxValue = file.Size;
+											await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
 
-											bool downloadSuccessful = false;
+											bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
 
-											do
+											if (isMD5Valid)
 											{
-												await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
+												downloadSuccessful = true;
+											}
+											else
+											{
+												AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+												System.IO.File.Delete(folderPath + "/" + file.Name);
+											}
 
-												bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
-
-												if (isMD5Valid)
-												{
-													downloadSuccessful = true;
-												}
-												else
-												{
-													AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
-													System.IO.File.Delete(folderPath + "/" + file.Name);
-												}
-
-											} while (!downloadSuccessful);
-										});
+										} while (!downloadSuccessful);
+									});
 								}
-							}, "Downloads");
-							break;
-						}
-						else if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "error-passwordWrong")
+							}
+						}, "Downloads");
+					}
+					else if (getContentResponse != null && getContentResponse.status == "error-passwordRequired" && Config != null && !string.IsNullOrEmpty(Config.Token))
+					{
+						AnsiConsole.Markup($"[red]Base Folder is password protected\n[/]");
+						while (true)
 						{
-							AnsiConsole.Markup("[red]Password is incorrect, please try again\n[/]");
-							continue;
+							string inputPassword = AnsiConsole.Prompt(new TextPrompt<string>("[red]Enter Password: [/]"));
+							string hashedPassword = PasswordHelper.ComputeSHA256Hash(inputPassword);
+							GetContentResponse? getContentResponseWithPassword = await aPIHelper.GetContentWithPassword(GetCode(inputUrl), hashedPassword, Config);
+							if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "ok")
+							{
+								Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponseWithPassword, Config);
+								if (!Path.Exists("Downloads"))
+								{
+									Directory.CreateDirectory("Downloads");
+								}
+
+								HttpClient client = CreateHttpClient(Config.Token);
+
+								await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
+								{
+									if (!Directory.Exists(folderPath))
+									{
+										Directory.CreateDirectory(folderPath);
+									}
+
+									foreach (Entities.File file in folder.Files)
+									{
+										if (file != null && file.Name != null && file.DownloadLink != null && file.MD5Hash != null)
+										{
+											await AnsiConsole.Progress()
+												.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
+												.StartAsync(async ctx =>
+												{
+													var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+													downloadTask.MaxValue = file.Size;
+
+													bool downloadSuccessful = false;
+
+													do
+													{
+														await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
+
+														bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
+
+														if (isMD5Valid)
+														{
+															downloadSuccessful = true;
+														}
+														else
+														{
+															AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+															System.IO.File.Delete(folderPath + "/" + file.Name);
+														}
+
+													} while (!downloadSuccessful);
+												});
+										}
+									}
+								}, "Downloads");
+								break;
+							}
+							else if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "error-passwordWrong")
+							{
+								AnsiConsole.Markup("[red]Password is incorrect, please try again\n[/]");
+								continue;
+							}
 						}
 					}
 				}
@@ -224,96 +231,43 @@ namespace GoFile_DL
 		{
 			try
 			{
-				using (StreamReader sr = new StreamReader("Links.txt"))
+				if(Config != null && !string.IsNullOrEmpty(Config.Token))
 				{
-					string line;
-
-					while ((line = sr.ReadLine()) != null)
+					using (StreamReader sr = new StreamReader("Links.txt"))
 					{
-						Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z]+)", RegexOptions.IgnoreCase);
-						if (regex.IsMatch(line))
+						string? line;
+
+						while ((line = sr.ReadLine()) != null)
 						{
-							GetContentResponse? getContentResponse = await aPIHelper.GetContent(GetCode(line), Config);
-							if (getContentResponse != null && getContentResponse.status == "ok")
+							Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z]+)", RegexOptions.IgnoreCase);
+							if (regex.IsMatch(line))
 							{
-								Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponse, Config);
-								if (!Path.Exists("Downloads"))
+								GetContentResponse? getContentResponse = await aPIHelper.GetContent(GetCode(line), Config);
+								if (getContentResponse != null && getContentResponse.status == "ok")
 								{
-									Directory.CreateDirectory("Downloads");
-								}
-
-								HttpClient client = CreateHttpClient(Config.Token);
-
-								await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
-								{
-									if (!Directory.Exists(folderPath))
+									Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponse, Config);
+									if (!Path.Exists("Downloads"))
 									{
-										Directory.CreateDirectory(folderPath);
+										Directory.CreateDirectory("Downloads");
 									}
 
-									if (folder.Files.Count > 0)
+									HttpClient client = CreateHttpClient(Config.Token);
+
+									await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
 									{
-										AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
-									}
-
-									foreach (Entities.File file in folder.Files)
-									{
-										await AnsiConsole.Progress()
-											.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
-											.StartAsync(async ctx =>
-											{
-												var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
-												downloadTask.MaxValue = file.Size;
-
-												bool downloadSuccessful = false;
-
-												do
-												{
-													await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
-
-													bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
-
-													if (isMD5Valid)
-													{
-														downloadSuccessful = true;
-													}
-													else
-													{
-														AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
-														System.IO.File.Delete(folderPath + "/" + file.Name);
-													}
-
-												} while (!downloadSuccessful);
-											});
-									}
-								}, "Downloads");
-							}
-							else if (getContentResponse != null && getContentResponse.status == "error-passwordRequired")
-							{
-								AnsiConsole.Markup($"[red]Base Folder is password protected\n[/]");
-								while (true)
-								{
-									string inputPassword = AnsiConsole.Prompt(new TextPrompt<string>("[red]Enter Password: [/]"));
-									string hashedPassword = PasswordHelper.ComputeSHA256Hash(inputPassword);
-									GetContentResponse? getContentResponseWithPassword = await aPIHelper.GetContentWithPassword(GetCode(line), hashedPassword, Config);
-									if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "ok")
-									{
-										Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponseWithPassword, Config);
-										if (!Path.Exists("Downloads"))
+										if (!Directory.Exists(folderPath))
 										{
-											Directory.CreateDirectory("Downloads");
+											Directory.CreateDirectory(folderPath);
 										}
 
-										HttpClient client = CreateHttpClient(Config.Token);
-
-										await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
+										if (folder.Files.Count > 0)
 										{
-											if (!Directory.Exists(folderPath))
-											{
-												Directory.CreateDirectory(folderPath);
-											}
+											AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
+										}
 
-											foreach (Entities.File file in folder.Files)
+										foreach (Entities.File file in folder.Files)
+										{
+											if (file != null && file.Name != null && file.DownloadLink != null && file.MD5Hash != null)
 											{
 												await AnsiConsole.Progress()
 													.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
@@ -343,20 +297,82 @@ namespace GoFile_DL
 														} while (!downloadSuccessful);
 													});
 											}
-										}, "Downloads");
-										break;
-									}
-									else if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "error-passwordWrong")
+										}
+									}, "Downloads");
+								}
+								else if (getContentResponse != null && getContentResponse.status == "error-passwordRequired")
+								{
+									AnsiConsole.Markup($"[red]Base Folder is password protected\n[/]");
+									while (true)
 									{
-										AnsiConsole.Markup("[red]Password is incorrect, please try again\n[/]");
-										continue;
+										string inputPassword = AnsiConsole.Prompt(new TextPrompt<string>("[red]Enter Password: [/]"));
+										string hashedPassword = PasswordHelper.ComputeSHA256Hash(inputPassword);
+										GetContentResponse? getContentResponseWithPassword = await aPIHelper.GetContentWithPassword(GetCode(line), hashedPassword, Config);
+										if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "ok")
+										{
+											Folder rootFolder = await aPIParser.ParseApiResponse(getContentResponseWithPassword, Config);
+											if (!Path.Exists("Downloads"))
+											{
+												Directory.CreateDirectory("Downloads");
+											}
+
+											HttpClient client = CreateHttpClient(Config.Token);
+
+											await rootFolder.IterateFoldersAsync(async (folder, folderPath) =>
+											{
+												if (!Directory.Exists(folderPath))
+												{
+													Directory.CreateDirectory(folderPath);
+												}
+
+												foreach (Entities.File file in folder.Files)
+												{
+													if (file != null && file.Name != null && file.DownloadLink != null && file.MD5Hash != null)
+													{
+														await AnsiConsole.Progress()
+															.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
+															.StartAsync(async ctx =>
+															{
+																var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+																downloadTask.MaxValue = file.Size;
+
+																bool downloadSuccessful = false;
+
+																do
+																{
+																	await DownloadHelper.DownloadFile(folderPath, file.Name, file.DownloadLink, client, downloadTask);
+
+																	bool isMD5Valid = DownloadHelper.VerifyMD5(folderPath + "/" + file.Name, file.MD5Hash);
+
+																	if (isMD5Valid)
+																	{
+																		downloadSuccessful = true;
+																	}
+																	else
+																	{
+																		AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+																		System.IO.File.Delete(folderPath + "/" + file.Name);
+																	}
+
+																} while (!downloadSuccessful);
+															});
+													}
+												}
+											}, "Downloads");
+											break;
+										}
+										else if (getContentResponseWithPassword != null && getContentResponseWithPassword.status == "error-passwordWrong")
+										{
+											AnsiConsole.Markup("[red]Password is incorrect, please try again\n[/]");
+											continue;
+										}
 									}
 								}
 							}
-						}
-						else
-						{
-							AnsiConsole.Markup($"[red]{line} is not a valid GoFile URL\n[/]");
+							else
+							{
+								AnsiConsole.Markup($"[red]{line} is not a valid GoFile URL\n[/]");
+							}
 						}
 					}
 				}

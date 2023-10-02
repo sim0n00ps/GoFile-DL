@@ -15,18 +15,21 @@ namespace GoFile_DL.Helpers
 		}
 		public async Task<Folder> ParseApiResponse(GetContentResponse response, Config config)
 		{
-			Folder rootFolder = new Folder
+			if(response != null && response.data != null && response.data.contents != null)
 			{
-				Id = response.data.id,
-				Name = response.data.name,
-				Folders = new List<Folder>(),
-				Files = new List<File>()
-			};
+				Folder? rootFolder = new Folder
+				{
+					Id = response.data.id,
+					Name = response.data.name,
+					Folders = new List<Folder>(),
+					Files = new List<File>()
+				};
 
-			// Recursively parse contents
-			await ParseContents(response.data.contents, rootFolder.Folders, rootFolder.Files, config);
+				await ParseContents(response.data.contents, rootFolder.Folders, rootFolder.Files, config);
 
-			return rootFolder;
+				return rootFolder;
+			}
+			return new Folder();
 		}
 
 		public async Task ParseContents(Dictionary<string, GetContentResponse.Content> contents, List<Folder> folders, List<File> files, Config config)
@@ -44,9 +47,14 @@ namespace GoFile_DL.Helpers
 					};
 					folders.Add(folder);
 
-					// Fetch folder content dynamically
-					var folderContentResponse = await FetchFolderContentAsync(content.name, content.id, config); // Implement this method to make the API request
-					await ParseContents(folderContentResponse.data.contents, folder.Folders, folder.Files, config);
+					if(content != null && content.name != null && content.id != null)
+					{
+						GetContentResponse? folderContentResponse = await FetchFolderContentAsync(content.name, content.id, config);
+						if (folderContentResponse != null && folderContentResponse.data != null && folderContentResponse.data.contents != null)
+						{
+							await ParseContents(folderContentResponse.data.contents, folder.Folders, folder.Files, config);
+						}
+					}
 				}
 				else if (content.type == "file")
 				{
@@ -63,9 +71,9 @@ namespace GoFile_DL.Helpers
 			}
 		}
 
-		private async Task<GetContentResponse> FetchFolderContentAsync(string folderName, string folderId, Config config)
+		private async Task<GetContentResponse?> FetchFolderContentAsync(string folderName, string folderId, Config config)
 		{
-			GetContentResponse getContentResponse = await aPIHelper.GetContent(folderId, config);
+			GetContentResponse? getContentResponse = await aPIHelper.GetContent(folderId, config);
 			if (getContentResponse != null && getContentResponse.status == "ok")
 			{
 				return getContentResponse;	

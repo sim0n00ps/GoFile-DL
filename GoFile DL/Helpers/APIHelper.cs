@@ -20,8 +20,8 @@ namespace GoFile_DL.Helpers
 				{
 					response.EnsureSuccessStatusCode();
 					string body = await response.Content.ReadAsStringAsync();
-					CreateAccountResponse account = JsonConvert.DeserializeObject<CreateAccountResponse>(body);
-					if (account != null && account.status == "ok")
+					CreateAccountResponse? account = JsonConvert.DeserializeObject<CreateAccountResponse?>(body);
+					if (account != null && account.data != null && account.data.token != null && account.status == "ok")
 					{
 						return account.data.token;
 					}
@@ -76,27 +76,30 @@ namespace GoFile_DL.Helpers
 		{
 			try
 			{
-				Dictionary<string, string> getParams = new()
+				if(config != null && !string.IsNullOrEmpty(config.Token) && !string.IsNullOrEmpty(config.SiteToken))
 				{
-					{ "contentId", contentId },
-					{ "token", config.Token },
-					{ "websiteToken", config.SiteToken }
-				};
-				string queryParams = "?" + string.Join("&", getParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-				HttpClient client = new HttpClient();
-				HttpRequestMessage request = new HttpRequestMessage
-				{
-					Method = HttpMethod.Get,
-					RequestUri = new Uri("https://api.gofile.io/getContent" + queryParams)
-				};
-				using (var response = await client.SendAsync(request))
-				{
-					response.EnsureSuccessStatusCode();
-					string body = await response.Content.ReadAsStringAsync();
-					GetContentResponse content = JsonConvert.DeserializeObject<GetContentResponse>(body);
-					if(content != null)
+					Dictionary<string, string> getParams = new()
 					{
-						return content;
+						{ "contentId", contentId },
+						{ "token", config.Token },
+						{ "websiteToken", config.SiteToken }
+					};
+					string queryParams = "?" + string.Join("&", getParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+					HttpClient client = new HttpClient();
+					HttpRequestMessage request = new HttpRequestMessage
+					{
+						Method = HttpMethod.Get,
+						RequestUri = new Uri("https://api.gofile.io/getContent" + queryParams)
+					};
+					using (var response = await client.SendAsync(request))
+					{
+						response.EnsureSuccessStatusCode();
+						string body = await response.Content.ReadAsStringAsync();
+						GetContentResponse? content = JsonConvert.DeserializeObject<GetContentResponse?>(body);
+						if (content != null)
+						{
+							return content;
+						}
 					}
 				}
 			}
@@ -110,28 +113,31 @@ namespace GoFile_DL.Helpers
 		{
 			try
 			{
-				Dictionary<string, string> getParams = new()
+				if(config != null && !string.IsNullOrEmpty(config.Token) && !string.IsNullOrEmpty(config.SiteToken))
 				{
-					{ "contentId", contentId },
-					{ "token", config.Token },
-					{ "websiteToken", config.SiteToken },
-					{ "password", password }
-				};
-				string queryParams = "?" + string.Join("&", getParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-				HttpClient client = new HttpClient();
-				HttpRequestMessage request = new HttpRequestMessage
-				{
-					Method = HttpMethod.Get,
-					RequestUri = new Uri("https://api.gofile.io/getContent" + queryParams)
-				};
-				using (var response = await client.SendAsync(request))
-				{
-					response.EnsureSuccessStatusCode();
-					string body = await response.Content.ReadAsStringAsync();
-					GetContentResponse content = JsonConvert.DeserializeObject<GetContentResponse>(body);
-					if (content != null)
+					Dictionary<string, string> getParams = new()
 					{
-						return content;
+						{ "contentId", contentId },
+						{ "token", config.Token },
+						{ "websiteToken", config.SiteToken },
+						{ "password", password }
+					};
+					string queryParams = "?" + string.Join("&", getParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+					HttpClient client = new HttpClient();
+					HttpRequestMessage request = new HttpRequestMessage
+					{
+						Method = HttpMethod.Get,
+						RequestUri = new Uri("https://api.gofile.io/getContent" + queryParams)
+					};
+					using (var response = await client.SendAsync(request))
+					{
+						response.EnsureSuccessStatusCode();
+						string body = await response.Content.ReadAsStringAsync();
+						GetContentResponse? content = JsonConvert.DeserializeObject<GetContentResponse?>(body);
+						if (content != null)
+						{
+							return content;
+						}
 					}
 				}
 			}
