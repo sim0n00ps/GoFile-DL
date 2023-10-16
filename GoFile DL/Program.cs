@@ -80,7 +80,7 @@ namespace GoFile_DL
 							.ValidationErrorMessage("[red]Please enter a valid GoFile link[/]")
 							.Validate(url =>
 							{
-								Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z]+)", RegexOptions.IgnoreCase);
+								Regex regex = new Regex("https://gofile\\.io/d/([A-Za-z0-9]+)", RegexOptions.IgnoreCase);
 								if (regex.IsMatch(url))
 								{
 									return ValidationResult.Success();
