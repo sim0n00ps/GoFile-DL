@@ -106,9 +106,9 @@ namespace GoFile_DL
 								Directory.CreateDirectory(folderPath);
 							}
 
-							if (folder.Files.Count > 0)
+							if (folder.Files.Count > 0 && folder.Name != null)
 							{
-								AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
+								AnsiConsole.Markup($"[red]Downloading Content for Folder - {Markup.Escape(folder.Name)}[/]");
 							}
 
 							foreach (Entities.File file in folder.Files)
@@ -119,7 +119,7 @@ namespace GoFile_DL
 									.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
 									.StartAsync(async ctx =>
 									{
-										var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+										var downloadTask = ctx.AddTask($"[red]{Markup.Escape(folderPath.Replace("\\", "/"))}/{Markup.Escape(file.Name)}[/]");
 										downloadTask.MaxValue = file.Size;
 
 										bool downloadSuccessful = false;
@@ -136,7 +136,7 @@ namespace GoFile_DL
 											}
 											else
 											{
-												AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+												AnsiConsole.Markup($"MD5 hash check failed for {Markup.Escape(file.Name)}. Retrying download...");
 												System.IO.File.Delete(folderPath + "/" + file.Name);
 											}
 
@@ -179,7 +179,7 @@ namespace GoFile_DL
 												.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
 												.StartAsync(async ctx =>
 												{
-													var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+													var downloadTask = ctx.AddTask($"[red]{Markup.Escape(folderPath.Replace("\\", "/"))}/{Markup.Escape(file.Name)}[/]");
 													downloadTask.MaxValue = file.Size;
 
 													bool downloadSuccessful = false;
@@ -196,7 +196,7 @@ namespace GoFile_DL
 														}
 														else
 														{
-															AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+															AnsiConsole.Markup($"MD5 hash check failed for {Markup.Escape(file.Name)}. Retrying download...");
 															System.IO.File.Delete(folderPath + "/" + file.Name);
 														}
 
@@ -260,9 +260,9 @@ namespace GoFile_DL
 											Directory.CreateDirectory(folderPath);
 										}
 
-										if (folder.Files.Count > 0)
+										if (folder.Files.Count > 0 && folder.Name != null)
 										{
-											AnsiConsole.Markup($"[red]Downloading Content for Folder - {folder.Name}[/]");
+											AnsiConsole.Markup($"[red]Downloading Content for Folder - {Markup.Escape(folder.Name)}[/]");
 										}
 
 										foreach (Entities.File file in folder.Files)
@@ -273,7 +273,7 @@ namespace GoFile_DL
 													.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
 													.StartAsync(async ctx =>
 													{
-														var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+														var downloadTask = ctx.AddTask($"[red]{Markup.Escape(folderPath.Replace("\\", "/"))}/{Markup.Escape(file.Name)}[/]");
 														downloadTask.MaxValue = file.Size;
 
 														bool downloadSuccessful = false;
@@ -290,7 +290,7 @@ namespace GoFile_DL
 															}
 															else
 															{
-																AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+																AnsiConsole.Markup($"MD5 hash check failed for {Markup.Escape(file.Name)}. Retrying download...");
 																System.IO.File.Delete(folderPath + "/" + file.Name);
 															}
 
@@ -333,7 +333,7 @@ namespace GoFile_DL
 															.Columns(new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(), new DownloadedColumn(), new RemainingTimeColumn())
 															.StartAsync(async ctx =>
 															{
-																var downloadTask = ctx.AddTask($"[red]{folderPath.Replace("\\", "/")}/{file.Name}[/]");
+																var downloadTask = ctx.AddTask($"[red]{Markup.Escape(folderPath.Replace("\\", "/"))}/{Markup.Escape(file.Name)}[/]");
 																downloadTask.MaxValue = file.Size;
 
 																bool downloadSuccessful = false;
@@ -350,7 +350,7 @@ namespace GoFile_DL
 																	}
 																	else
 																	{
-																		AnsiConsole.Markup($"MD5 hash check failed for {file.Name}. Retrying download...");
+																		AnsiConsole.Markup($"MD5 hash check failed for {Markup.Escape(file.Name)}. Retrying download...");
 																		System.IO.File.Delete(folderPath + "/" + file.Name);
 																	}
 
